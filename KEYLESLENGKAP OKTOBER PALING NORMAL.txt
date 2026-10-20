@@ -1,0 +1,43 @@
+void setup() {
+  Serial.begin(115200);
+  pinMode(relayPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(SeinKiri, OUTPUT);
+  pinMode(SeinKanan, OUTPUT);
+  pinMode(switchPin, INPUT_PULLUP);
+  
+  // 1. Inisialisasi dasar pin input tombol tanpa interupsi dulu
+  pinMode(AccPin, INPUT_PULLUP); 
+
+  digitalWrite(relayPin, LOW);
+  digitalWrite(ledPin, LOW);
+  digitalWrite(SeinKiri, LOW);
+  digitalWrite(SeinKanan, LOW);
+
+  // 2. Berikan delay jeda agar listrik pull-up internal stabil sebelum sistem nirkabel aktif
+  delay(500);            
+  accTriggered = false;  // Bersihkan sisa kejutan muatan listrik awal
+
+  BLEDevice::init("");
+  pBLEScan = BLEDevice::getScan();
+  pBLEScan->setActiveScan(true);
+
+  // 3. BARU AKTIFKAN INTERRUPT di akhir setelah semua noise inisialisasi hardware mereda
+  attachInterrupt(digitalPinToInterrupt(AccPin), accButtonInterrupt, FALLING);
+
+  // --- Inisialisasi Watchdog Timer ---
+  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    esp_task_wdt_config_t wdt_config = {
+        .timeout_ms = WDT_TIMEOUT_SECONDS * 1000,
+        .idle_core_mask = (1 << 0),
+        .trigger_panic = true
+    };
+    esp_task_wdt_init(&wdt_config);
+    esp_task_wdt_add(NULL);
+  #else
+    esp_task_wdt_init(WDT_TIMEOUT_SECONDS, true);
+    esp_task_wdt_add(NULL);
+  #endif
+
+  Serial.println(">>> SISTEM V7.1: HARDENED INTERRUPT ACC GPIO 4 (READY) <<<");
+}
